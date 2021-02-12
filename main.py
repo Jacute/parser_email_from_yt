@@ -21,9 +21,11 @@ options.add_argument("user-agent=Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:85.0
 
 # for ChromeDriver version 79.0.3945.16 or over
 options.add_argument("--disable-blink-features=AutomationControlled")
+options.add_argument('headless')
+options.add_argument('window-size=1920x935')
 
 driver = webdriver.Chrome(
-    executable_path=os.path.abspath('chromedriver'),
+    executable_path=os.path.abspath('chromedriver.exe'),
     options=options
 )
 
@@ -42,8 +44,9 @@ try:
         file = f.read().split('\n')
     for i in file:
         if i != '':
+            print(f'Парсинг данных со всех запросов из data.txt: {file.index(i) + 1} из {len(file)}')
             driver.get(f'https://www.youtube.com/results?search_query={i}&sp=EgIQAg%253D%253D')
-            driver.implicitly_wait(10)
+            driver.implicitly_wait(5)
             while True:
                 scroll_height = 2000
                 document_height_before = driver.execute_script("return document.documentElement.scrollHeight")
@@ -66,10 +69,11 @@ try:
                     if sub >= count_subs:
                         url = blocks[block].get_attribute('href')
                         data_without_mail.append((url, ' '.join(data_subs), i))
-            time.sleep(1)
+    print('Обработка всех запросов')
     for i in data_without_mail:
+        print(f'Обработка {data_without_mail.index(i) + 1} из {len(data_without_mail)}')
         driver.get(i[0])
-        driver.implicitly_wait(10)
+        driver.implicitly_wait(4)
         email = 'Почта не найдена'
         try:
             about = driver.find_element_by_css_selector('paper-tab.style-scope:nth-child(12)')
@@ -82,23 +86,29 @@ try:
                         pass
                     else:
                         email = 'Почта не найдена'
-                time.sleep(1)
         except Exception:
             email = 'Почта не найдена'
         data.append((email, i[0], i[1], i[2]))
-    with open('1.csv', mode='w') as f:
-        writer = csv.writer(f, quoting=csv.QUOTE_MINIMAL)
+    with open('1.csv', mode='w', newline='') as f:
+        writer = csv.writer(
+            f, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
         writer.writerow(('Почта', ''))
         for i in data:
             if i[0] != 'Почта не найдена':
                 writer.writerow((i[0], ''))
 
-    with open('2.csv', mode='w') as f:
-        writer = csv.writer(f, quoting=csv.QUOTE_MINIMAL)
+    with open('2.csv', mode='w', newline='') as f:
+        writer = csv.writer(
+            f, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
         writer.writerow(('Почта', 'Ссылка на канал', 'Подписчики', 'Ключевое слово'))
         for i in data:
             if i[0] != 'Почта не найдена':
                 writer.writerow(i)
+    print('Парсинг завершён!')
+except Exception as e:
+    print('Ошибка!')
+    print(e)
 finally:
     driver.close()
     driver.quit()
+    print(input('Нажмите ENTER, чтобы закрыть это окно'))
